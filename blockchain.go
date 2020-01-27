@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -10,17 +12,18 @@ import (
 //Blockのstructを定義
 type Block struct {
 	nonce        int
-	previousHash string
+	previousHash [32]byte
 	timestamp    int64
-	transactions []string
+	transactions []*Transaction
 }
 
 //新しいブロックを生成
-func NewBlock(nonce int, previousHash string) *Block {
+func NewBlock(nonce int, previousHash [32]byte, transactions []*Transaction) *Block {
 	b := new(Block)
 	b.timestamp = time.Now().UnixNano()
 	b.nonce = nonce
 	b.previousHash = previousHash
+	b.transactions = transactions
 	return b
 }
 
@@ -28,38 +31,105 @@ func NewBlock(nonce int, previousHash string) *Block {
 func (b *Block) Print() {
 	fmt.Printf("timestamp             %d\n", b.timestamp)
 	fmt.Printf("nonce                 %d\n", b.nonce)
-	fmt.Printf("previous_hash         %s\n", b.previousHash)
-	fmt.Printf("transactions          %s\n", b.transactions)
+	fmt.Printf("previous_hash         %x\n", b.previousHash)
+	for _, t := range b.transactions {
+		t.Print()
+	}
+}
+
+//hash化するためのメソッド
+func (b *Block) Hash() [32]byte {
+	m, _ := json.Marshal(b)
+	return sha256.Sum256([]byte(m))
+}
+
+//jsonにしてからhash化するための記述
+func (b *Block) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Timestamp    int64          `json:"timestamp"`
+		Nonce        int            `json:"nonce"`
+		PreviousHash [32]byte       `json:"previous_hash"`
+		Transactions []*Transaction `json:"transactions"`
+	}{
+		Timestamp:    b.timestamp,
+		Nonce:        b.nonce,
+		PreviousHash: b.previousHash,
+		Transactions: b.transactions,
+	})
 }
 
 type Blockchain struct {
-	transactionPool []string
+	transactionPool []*Transaction
 	chain           []*Block
 }
 
 //新規でblockchainを生成する
 func NewBlockchain() *Blockchain {
+	b := &Block{}
 	bc := new(Blockchain)
-	bc.CreateBlock(0, "init hash")
+	bc.CreateBlock(0, b.Hash())
 	return bc
 }
 
 //生成したblockを元にblockchainを生成するためのメソッド
-func (bc *Blockchain) CreateBlock(nonce int, previousHash string) *Block {
-	b := NewBlock(nonce, previousHash)
+func (bc *Blockchain) CreateBlock(nonce int, previousHash [32]byte) *Block {
+	b := NewBlock(nonce, previousHash, bc.transactionPool)
 	//chainに生成したBlockを追加していく
 	bc.chain = append(bc.chain, b)
+	bc.transactionPool = []*Transaction{}
 	return b
+}
+
+//最後のブロックを求めるメソッド
+func (bc *Blockchain) LastBlock() *Block {
+	return bc.chain[len(bc.chain)-1]
 }
 
 //blockchainを表示した時に見やすくするためのメソッド
 func (bc *Blockchain) Print() {
 	//chainの中身を取り出す
 	for i, block := range bc.chain {
-		fmt.Printf("%s Chain %d %s \n", strings.Repeat("=",25),i, strings.Repeat("=", 25))
+		fmt.Printf("%s Chain %d %s \n", strings.Repeat("=", 25), i, strings.Repeat("=", 25))
 		block.Print()
 	}
 	fmt.Printf("%s\n", strings.Repeat("*", 25))
+}
+
+//transactionをpoolに追加していく
+func (bc *Blockchain) AddTransaction(sender string, recipient string, value float32) {
+	t := NewTransaction(sender, recipient, value)
+	bc.transactionPool = append(bc.transactionPool, t)
+}
+
+//transactionのstruct
+type Transaction struct {
+	senderBlockChainAddress    string
+	recipientBlockChainAddress string
+	value                      float32
+}
+
+//新規トランザクションを生成
+func NewTransaction(sender string, recipient string, value float32) *Transaction {
+	return &Transaction{sender, recipient, value}
+}
+
+func (t *Transaction) Print() {
+	fmt.Printf("%s\n", strings.Repeat("-", 40))
+	fmt.Printf(" sender_blockchain_address     %s\n", t.senderBlockChainAddress)
+	fmt.Printf(" sender_blockchain_address     %s\n", t.recipientBlockChainAddress)
+	fmt.Printf(" value                         %.1f\n", t.value)
+}
+
+func (t *Transaction) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		SenderBlockChainAddress    string  `json:"sender_block_chain_address"`
+		RecipientBlockChainAddress string  `json:"recipient_block_chain_address"`
+		Value                      float32 `json:"value"`
+	}{
+		SenderBlockChainAddress:    t.senderBlockChainAddress,
+		RecipientBlockChainAddress: t.recipientBlockChainAddress,
+		Value:                      t.value,
+	})
 }
 
 func init() {
@@ -70,10 +140,15 @@ func init() {
 func main() {
 	blockChain := NewBlockchain()
 	blockChain.Print()
-	blockChain.CreateBlock(5, "hash 1")
-	blockChain.Print()
-	blockChain.CreateBlock(2, "hash 2")
-	blockChain.Print()
-	blockChain.CreateBlock(3, "hash 3")
 
+	blockChain.AddTransaction("A", "B", 1.0)
+	previousHash := blockChain.LastBlock().Hash()
+	blockChain.CreateBlock(5, previousHash)
+	blockChain.Print()
+
+	blockChain.AddTransaction("C", "D", 2.0)
+	blockChain.AddTransaction("X", "Y", 3.0)
+	previousHash = blockChain.LastBlock().Hash()
+	blockChain.CreateBlock(2, previousHash)
+	blockChain.Print()
 }
