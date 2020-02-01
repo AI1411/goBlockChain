@@ -15,6 +15,7 @@ func main() {
 	//publicKey privateKey生成して表示
 	fmt.Println(w.PrivateKeyStr())
 	fmt.Println(w.PublicKeyStr())
+	fmt.Println(w.BlockchainAddress())
 	//myBlockchainAddress := "my block chain"
 	//blockChain := NewBlockchain(myBlockchainAddress)
 	//blockChain.Print()
