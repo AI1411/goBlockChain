@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"goblockchain/block"
 	"goblockchain/wallet"
 )
 
@@ -11,28 +12,20 @@ func init() {
 }
 
 func main() {
-	w := wallet.NewWallet()
-	//publicKey privateKey生成して表示
-	fmt.Println(w.PrivateKeyStr())
-	fmt.Println(w.PublicKeyStr())
-	fmt.Println(w.BlockchainAddress())
+	walletM := wallet.NewWallet()
+	walletA := wallet.NewWallet()
+	walletB := wallet.NewWallet()
 
-	t := wallet.NewTransaction(w.PrivateKey(), w.PublicKey(), w.BlockchainAddress(), "B", 1.0)
-	fmt.Printf("signature %s \n", t.GenerateSignature())
-	//myBlockchainAddress := "my block chain"
-	//blockChain := NewBlockchain(myBlockchainAddress)
-	//blockChain.Print()
-	//
-	//blockChain.AddTransaction("A", "B", 1.0)
-	//blockChain.Mining()
-	//blockChain.Print()
-	//
-	//blockChain.AddTransaction("C", "D", 2.0)
-	//blockChain.AddTransaction("X", "Y", 3.0)
-	//blockChain.Mining()
-	//blockChain.Print()
-	//
-	//fmt.Printf("my %.1f\n", blockChain.CalculateTotalAmount("my block chain"))
-	//fmt.Printf("c %.1f\n", blockChain.CalculateTotalAmount("C"))
-	//fmt.Printf("d %.1f\n", blockChain.CalculateTotalAmount("D"))
+	t := wallet.NewTransaction(walletA.PrivateKey(), walletA.PublicKey(), walletA.BlockchainAddress(), walletB.BlockchainAddress(), 1.0)
+
+	blockchain := block.NewBlockchain(walletM.BlockchainAddress())
+	isAdded := blockchain.AddTransaction(walletA.BlockchainAddress(), walletB.BlockchainAddress(), 1.0, walletA.PublicKey(), t.GenerateSignature())
+	fmt.Println("Added?", isAdded)
+
+	blockchain.Mining()
+	blockchain.Print()
+
+	fmt.Printf("A %.1f\n", blockchain.CalculateTotalAmount(walletA.BlockchainAddress()))
+	fmt.Printf("B %.1f\n", blockchain.CalculateTotalAmount(walletB.BlockchainAddress()))
+	fmt.Printf("M %.1f\n", blockchain.CalculateTotalAmount(walletM.BlockchainAddress()))
 }

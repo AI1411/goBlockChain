@@ -1,18 +1,20 @@
 package block
 
 import (
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"goblockchain/utils"
 	"log"
 	"strings"
 	"time"
 )
 
 const (
-	MINING_DIFICULTY = 3
-	MINING_SENDER    = "THE BLOCK CHAIN"
-	MINING_REWORD    = 1.0
+	MINING_DIFFICULTY = 3
+	MINING_SENDER     = "THE BLOCKCHAIN"
+	MINING_REWARD     = 1.0
 )
 
 //Blockのstructを定義
@@ -104,18 +106,42 @@ func (bc *Blockchain) Print() {
 }
 
 //transactionをpoolに追加していく
-func (bc *Blockchain) AddTransaction(sender string, recipient string, value float32) {
+func (bc *Blockchain) AddTransaction(sender string, recipient string, value float32, senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
 	t := NewTransaction(sender, recipient, value)
-	bc.transactionPool = append(bc.transactionPool, t)
+
+	//お金が足りない場合
+	//if sender == MINING_SENDER {
+	//	bc.transactionPool = append(bc.transactionPool, t)
+	//	return true
+	//}
+	//署名が認められればtransactionPoolにtransactionを追加
+	if bc.VerifyTransactionSignature(senderPublicKey, s, t) {
+		if bc.CalculateTotalAmount(sender) < value {
+			log.Println("ERROR: お金が足りません")
+			return false
+		}
+		bc.transactionPool = append(bc.transactionPool, t)
+		return true
+	} else {
+		log.Println("ERROR: Verify Transaction")
+	}
+	return false
+}
+
+func (bc *Blockchain) VerifyTransactionSignature(
+	senderPublicKey *ecdsa.PublicKey, s *utils.Signature, t *Transaction) bool {
+	m, _ := json.Marshal(t)
+	h := sha256.Sum256([]byte(m))
+	return ecdsa.Verify(senderPublicKey, h[:], s.R, s.S)
 }
 
 func (bc *Blockchain) CopyTransactionPool() []*Transaction {
 	transactions := make([]*Transaction, 0)
 	for _, t := range bc.transactionPool {
-		transactions = append(transactions, NewTransaction(
-			t.senderBlockChainAddress,
-			t.recipientBlockChainAddress,
-			t.value))
+		transactions = append(transactions,
+			NewTransaction(t.senderBlockchainAddress,
+				t.recipientBlockchainAddress,
+				t.value))
 	}
 	return transactions
 }
@@ -132,8 +158,7 @@ func (bc *Blockchain) ProofOfWork() int {
 	transactions := bc.CopyTransactionPool()
 	previousHash := bc.LastBlock().Hash()
 	nonce := 0
-	//正しいnonceになるまでforで回す
-	for !bc.ValidProof(nonce, previousHash, transactions, MINING_DIFICULTY) {
+	for !bc.ValidProof(nonce, previousHash, transactions, MINING_DIFFICULTY) {
 		nonce += 1
 	}
 	return nonce
@@ -141,7 +166,7 @@ func (bc *Blockchain) ProofOfWork() int {
 
 //miningできたかどうか判定
 func (bc *Blockchain) Mining() bool {
-	bc.AddTransaction(MINING_SENDER, bc.blockchainAddress, MINING_REWORD)
+	bc.AddTransaction(MINING_SENDER, bc.blockchainAddress, MINING_REWARD, nil, nil)
 	nonce := bc.ProofOfWork()
 	previousHash := bc.LastBlock().Hash()
 	bc.CreateBlock(nonce, previousHash)
@@ -149,16 +174,16 @@ func (bc *Blockchain) Mining() bool {
 	return true
 }
 
-//送受信があった金額を計算する処理
-func (bc *Blockchain) CalculateTotalAmount(blockchainAdress string) float32 {
+func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) float32 {
 	var totalAmount float32 = 0.0
 	for _, b := range bc.chain {
 		for _, t := range b.transactions {
 			value := t.value
-			if blockchainAdress == t.recipientBlockChainAddress {
+			if blockchainAddress == t.recipientBlockchainAddress {
 				totalAmount += value
 			}
-			if blockchainAdress == t.senderBlockChainAddress {
+
+			if blockchainAddress == t.senderBlockchainAddress {
 				totalAmount -= value
 			}
 		}
@@ -166,11 +191,10 @@ func (bc *Blockchain) CalculateTotalAmount(blockchainAdress string) float32 {
 	return totalAmount
 }
 
-
 //transactionのstruct
 type Transaction struct {
-	senderBlockChainAddress    string
-	recipientBlockChainAddress string
+	senderBlockchainAddress    string
+	recipientBlockchainAddress string
 	value                      float32
 }
 
@@ -181,19 +205,19 @@ func NewTransaction(sender string, recipient string, value float32) *Transaction
 
 func (t *Transaction) Print() {
 	fmt.Printf("%s\n", strings.Repeat("-", 40))
-	fmt.Printf(" sender_blockchain_address     %s\n", t.senderBlockChainAddress)
-	fmt.Printf(" sender_blockchain_address     %s\n", t.recipientBlockChainAddress)
-	fmt.Printf(" value                         %.1f\n", t.value)
+	fmt.Printf(" sender_blockchain_address      %s\n", t.senderBlockchainAddress)
+	fmt.Printf(" recipient_blockchain_address   %s\n", t.recipientBlockchainAddress)
+	fmt.Printf(" value                          %.1f\n", t.value)
 }
 
 func (t *Transaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		SenderBlockChainAddress    string  `json:"sender_block_chain_address"`
-		RecipientBlockChainAddress string  `json:"recipient_block_chain_address"`
-		Value                      float32 `json:"value"`
+		Sender    string  `json:"sender_blockchain_address"`
+		Recipient string  `json:"recipient_blockchain_address"`
+		Value     float32 `json:"value"`
 	}{
-		SenderBlockChainAddress:    t.senderBlockChainAddress,
-		RecipientBlockChainAddress: t.recipientBlockChainAddress,
-		Value:                      t.value,
+		Sender:    t.senderBlockchainAddress,
+		Recipient: t.recipientBlockchainAddress,
+		Value:     t.value,
 	})
 }
