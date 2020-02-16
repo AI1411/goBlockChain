@@ -85,13 +85,13 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 
 		w.Header().Add("Content-Type", "application/json")
 
-		transaction := wallet.NewTransaction(privateKey, publicKey, *t.SenderBlockchainAddress,*t.RecipientBlockachainAddress, value32)
+		transaction := wallet.NewTransaction(privateKey, publicKey, *t.SenderBlockchainAddress,*t.RecipientBlockchainAddress, value32)
 		signature := transaction.GenerateSignature()
 		signatureStr := signature.String()
 
 		bt := &block.TransactionRequest{
 			t.SenderBlockchainAddress,
-			t.RecipientBlockachainAddress,
+			t.RecipientBlockchainAddress,
 			t.SenderPublicKey,
 			&value32,&signatureStr,
 		}
