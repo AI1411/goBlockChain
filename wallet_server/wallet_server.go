@@ -71,6 +71,7 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 		if !t.Validate() {
 			log.Println("Error: missing field(s)")
 			io.WriteString(w,string(utils.JsonStatus("fail")))
+			return
 		}
 		publicKey := utils.PublicKeyFromString(*t.SenderPublicKey)
 		privateKey := utils.PrivateKeyFromString(*t.SenderPrivateKey, publicKey)

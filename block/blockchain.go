@@ -35,6 +35,10 @@ func NewBlock(nonce int, previousHash [32]byte, transactions []*Transaction) *Bl
 	return b
 }
 
+func (bc *Blockchain) TransactionPool() []*Transaction {
+	return bc.transactionPool
+}
+
 //block表示した時に見やすくするためのメソッド
 func (b *Block) Print() {
 	fmt.Printf("timestamp             %d\n", b.timestamp)
@@ -115,6 +119,13 @@ func (bc *Blockchain) Print() {
 	fmt.Printf("%s\n", strings.Repeat("*", 25))
 }
 
+func (bc *Blockchain) CreateTransaction(sender string, recipient string, value float32, senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
+	isTransacted := bc.AddTransaction(sender, recipient, value, senderPublicKey, s)
+	//todo
+	//sunc
+	return isTransacted
+}
+
 //transactionをpoolに追加していく
 func (bc *Blockchain) AddTransaction(sender string, recipient string, value float32, senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
 	t := NewTransaction(sender, recipient, value)
@@ -126,10 +137,10 @@ func (bc *Blockchain) AddTransaction(sender string, recipient string, value floa
 	//}
 	//署名が認められればtransactionPoolにtransactionを追加
 	if bc.VerifyTransactionSignature(senderPublicKey, s, t) {
-		if bc.CalculateTotalAmount(sender) < value {
-			log.Println("ERROR: お金が足りません")
-			return false
-		}
+		//if bc.CalculateTotalAmount(sender) < value {
+		//	log.Println("ERROR: お金が足りません")
+		//	return false
+		//}
 		bc.transactionPool = append(bc.transactionPool, t)
 		return true
 	} else {
