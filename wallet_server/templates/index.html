@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Wallet</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <script>
         $(function () {
@@ -13,25 +13,27 @@
                     $('#public_key').val(response['public_key']);
                     $('#private_key').val(response['private_key']);
                     $('#blockchain_address').val(response['blockchain_address']);
-                    console.info(response)
+                    console.info(response);
                 },
                 error: function (error) {
-                    console.error(error)
+                    console.error(error);
                 }
             });
+
             $('#send_money_button').click(function () {
-                let confirm_text = 'Are you  sure to send?';
+                let confirm_text = 'Are you sure to send?';
                 let confirm_result = confirm(confirm_text);
                 if (confirm_result !== true) {
                     alert('Canceled');
                     return
                 }
+
                 let transaction_data = {
-                    'sender_private_key' : $('#private_key').val(),
+                    'sender_private_key': $('#private_key').val(),
                     'sender_blockchain_address': $('#blockchain_address').val(),
-                    'recipient_blockchain_address': $('#blockchain_address').val(),
-                    'sender_public_key' : $('#public_key').val(),
-                    'value': $('#send_amount').val()
+                    'recipient_blockchain_address': $('#recipient_blockchain_address').val(),
+                    'sender_public_key': $('#public_key').val(),
+                    'value': $('#send_amount').val(),
                 };
 
                 $.ajax({
@@ -40,39 +42,47 @@
                     contentType: 'application/json',
                     data: JSON.stringify(transaction_data),
                     success: function (response) {
+                        console.info(response);
                         alert('Send success');
                     },
                     error: function (response) {
+                        console.error(response);
                         alert('Send failed');
                     }
                 })
             })
         })
+
     </script>
 </head>
 <body>
+
 <div>
     <h1>Wallet</h1>
     <div id="wallet_amount">0</div>
     <button id="reload_wallet">Reload Wallet</button>
 
     <p>Public Key</p>
-    <textarea name="" id="public_key" cols="100" rows="2"></textarea>
+    <textarea id="public_key" rows="2" cols="100"></textarea>
 
-    <p>private Key</p>
-    <textarea name="" id="private_key" cols="100" rows="1"></textarea>
+    <p>Private Key</p>
+    <textarea id="private_key" rows="1" cols="100"></textarea>
 
     <p>Blockchain Address</p>
-    <textarea name="" id="blockchain_address" cols="100" rows="1"></textarea>
+    <textarea id="blockchain_address" rows="1" cols="100"></textarea>
+
 </div>
 
 <div>
     <h1>Send Money</h1>
-    <div>Address: <input type="text" size="100" id="recipient_blockchain_address"></div>
-    <br>
-    Amount: <input type="text" id="send_amount">
-    <br>
-    <button id="send_money_button">Send</button>
+    <div>
+        Address: <input id="recipient_blockchain_address" size="100" type="text">
+        <br>
+        Amount: <input id="send_amount" type="text">
+        <br>
+        <button id="send_money_button">Send</button>
+    </div>
 </div>
+
 </body>
 </html>
